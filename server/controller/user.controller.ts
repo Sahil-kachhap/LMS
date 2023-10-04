@@ -1,0 +1,73 @@
+import { Request, Response, NextFunction } from "express";
+import userModel from "../model/user.model";
+import ErrorHandler from "../utils/error_handler";
+import { catchAsyncError } from "../middleware/catch_async_error";
+import jwt, { Secret } from "jsonwebtoken";
+import ejs from "ejs";
+import path from "path";
+import sendMail from "../utils/send_mail";
+require('dotenv').config();
+
+interface IRegisteredUser {
+    name: string;
+    email: string;
+    password: string;
+    avatar?: string;
+};
+
+export const registerUser = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { name, email, password } = req.body;
+
+        const isEmailExist = await userModel.findOne({ email });
+
+        if (isEmailExist) {
+            return next(new ErrorHandler("Email Already Exists", 400));
+        }
+
+        const user: IRegisteredUser = {
+            name,
+            email,
+            password
+        }
+
+        // generate 4 digit activation code that will be sent to user's email id for account activation
+        const { token, activationCode } = createActivationToken(user);
+
+        const data = { user: { name: user.name }, code: activationCode };
+        const html = await ejs.renderFile(path.join(__dirname, "../mails/account-activation.ejs"), data);
+
+        try {
+            await sendMail({
+                email: user.email,
+                subject: "Activate your account",
+                template: "account-activation.ejs",
+                data,
+            });
+
+            res.status(401).json({
+                success: true,
+                message: `Please check your mail: ${user.email} to activate your account`,
+                activationToken: token
+            });
+
+        } catch (error: any) {
+            return next(new ErrorHandler(error.message, 400));
+        }
+
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
+});
+
+interface IActivationToken {
+    token: string;
+    activationCode: string;
+}
+
+export const createActivationToken = (user: any): IActivationToken => {
+    const activationCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+    const token = jwt.sign({ user, activationCode }, process.env.ACTIVATION_SECRET as Secret, { expiresIn: "5m" });
+    return { token, activationCode };
+}
