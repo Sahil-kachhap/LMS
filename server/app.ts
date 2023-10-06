@@ -3,6 +3,7 @@ import express from "express"
 import cookieParser from "cookie-parser"
 import cors from "cors"
 import userRouter from "./routes/user.route"
+import { ErrorMiddleware } from "./middleware/error"
 export const app = express()
 
 // request body should be of max 50 mb
@@ -33,3 +34,7 @@ app.all("*", (req, res, next) => {
     error.statusCode = 404;
     next(error);
 })
+
+
+// custom error handler middleware
+app.use(ErrorMiddleware);
