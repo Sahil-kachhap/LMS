@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import cloudinary from "cloudinary";
 import userModel, { IUser } from "../model/user.model";
 import ErrorHandler from "../utils/error_handler";
 import { catchAsyncError } from "../middleware/catch_async_error";
@@ -184,7 +185,7 @@ export const updateAccessToken = catchAsyncError(async (req: Request, res: Respo
         const user = JSON.parse(session);
         const accessToken = jwt.sign({ id: user._id }, process.env.ACCESS_TOKEN as string, { expiresIn: "5m" });
         const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN as string, { expiresIn: "3d" });
-        
+
         req.user = user;
         res.cookie("access_token", accessToken, accessTokenOptions);
         res.cookie("refresh_token", refreshToken, refreshTokenOptions);
@@ -265,6 +266,100 @@ export const updateUserInfo = catchAsyncError(async (req: Request, res: Response
             success: true,
             user,
         });
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
+});
+
+// update user password
+interface IUpdatePasswordBody {
+    oldPassword: string;
+    newPassword: string;
+}
+
+export const updatePassword = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { newPassword, oldPassword } = req.body as IUpdatePasswordBody;
+
+        if (!newPassword || !oldPassword) {
+            return next(new ErrorHandler("Please Enter old and new password to reset", 400));
+        }
+
+        const user = await userModel.findById(req.user?._id).select("+password");
+
+        if (user?.password === undefined) {
+            return next(new ErrorHandler("password update not supported for socially authenticated users", 400));
+        }
+
+        const isPasswordMatched = await user.comparePassword(oldPassword);
+        if (!isPasswordMatched) {
+            return next(new ErrorHandler("Invalid Old Password", 400));
+        }
+
+        user.password = newPassword;
+        await user.save();
+        await redis.set(req.user?._id, JSON.stringify(user));
+
+
+        res.status(201).json({
+            success: true,
+            message: "Password Updated Successfully.",
+            user
+        })
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
+});
+
+// update profile picture/avatar
+interface IProfileAvatar {
+    avatar: string
+}
+
+export const updateAvatar = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { avatar } = req.body as IProfileAvatar;
+        
+        if(!avatar){
+            return next(new ErrorHandler("Please upload a image to update profile avatar", 400));
+        }
+
+        const userId = req.user?._id;
+        const user = await userModel.findById(userId);
+
+        if (avatar && user) {
+            if (user?.avatar.public_id) {
+                await cloudinary.v2.uploader.destroy(user.avatar.public_id);
+                const cloud = await cloudinary.v2.uploader.upload(avatar, {
+                    folder: "avatars",
+                    width: 150,
+                });
+
+                user.avatar = {
+                    public_id: cloud.public_id,
+                    url: cloud.secure_url
+                }
+            } else {
+                const cloud = await cloudinary.v2.uploader.upload(avatar, {
+                    folder: "avatars",
+                    width: 150,
+                });
+
+                user.avatar = {
+                    public_id: cloud.public_id,
+                    url: cloud.secure_url
+                }
+            }
+        }
+
+        await user?.save();
+        await redis.set(userId, JSON.stringify(user));
+
+        res.status(200).json({
+            success: true,
+            message: "Profile Image Updated Successfully",
+            user,
+        })
     } catch (error: any) {
         return next(new ErrorHandler(error.message, 400));
     }
