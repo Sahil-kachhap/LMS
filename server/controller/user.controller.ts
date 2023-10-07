@@ -2,12 +2,13 @@ import { Request, Response, NextFunction } from "express";
 import userModel, { IUser } from "../model/user.model";
 import ErrorHandler from "../utils/error_handler";
 import { catchAsyncError } from "../middleware/catch_async_error";
-import jwt, { Secret } from "jsonwebtoken";
+import jwt, { JwtPayload, Secret } from "jsonwebtoken";
 import ejs from "ejs";
 import path from "path";
 import sendMail from "../utils/send_mail";
-import { sendToken } from "../utils/jwt";
+import { accessTokenOptions, refreshTokenOptions, sendToken } from "../utils/jwt";
 import { redis } from "../utils/redis";
+import { getUserById } from "../services/user.service";
 require('dotenv').config();
 
 interface IRegisteredUser {
@@ -149,17 +150,60 @@ export const loginUser = catchAsyncError(async (req: Request, res: Response, nex
 
 // logout user
 export const logoutUser = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
-   try{
-     res.cookie("access_token", "", {maxAge: 1});
-     res.cookie("refresh_token", "", {maxAge: 1});
-     const userID = req.user?._id || "";
-     redis.del(userID);
+    try {
+        res.cookie("access_token", "", { maxAge: 1 });
+        res.cookie("refresh_token", "", { maxAge: 1 });
+        const userID = req.user?._id || "";
+        redis.del(userID);
 
-     res.status(200).json({
-        success: true,
-        message: "Logged out successfully"
-     })
-   }catch(error: any){
-     return next(new ErrorHandler(error.message, 400));
-   }
+        res.status(200).json({
+            success: true,
+            message: "Logged out successfully"
+        })
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
 });
+
+// update access token
+export const updateAccessToken = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const refresh_token = req.cookies.refresh_token;
+        const decodePayload = jwt.verify(refresh_token, process.env.REFRESH_TOKEN as string) as JwtPayload;
+
+        if (!decodePayload) {
+            return next(new ErrorHandler("Could not refresh token", 400));
+        }
+
+        const session = await redis.get(decodePayload.id as string);
+
+        if (!session) {
+            return next(new ErrorHandler("Could not refresh token", 400));
+        }
+
+        const user = JSON.parse(session);
+        const accessToken = jwt.sign({ id: user._id }, process.env.ACCESS_TOKEN as string, { expiresIn: "5m" });
+        const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN as string, { expiresIn: "3d" });
+
+        res.cookie("access_token", accessToken, accessTokenOptions);
+        res.cookie("refresh_token", refreshToken, refreshTokenOptions);
+
+        res.status(200).json({
+            success: true,
+            accessToken
+        });
+
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
+});
+
+// get user info
+export const getUserInfo = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const user_id = req.user?._id as string;
+        getUserById(user_id, res);
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
+})
