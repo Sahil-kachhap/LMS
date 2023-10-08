@@ -74,7 +74,7 @@ export const getSingleCourse = catchAsyncError(async (req: Request, res: Respons
             });
         } else {
             const courseData = await CourseModel.findById(courseID).select("-courseData.videoUrl -courseData.links -courseData.questions -courseData.suggestions");
-            
+
             // store db data in redis cache
             await redis.set(courseID, JSON.stringify(courseData));
 
@@ -93,20 +93,44 @@ export const getAllCourses = catchAsyncError(async (req: Request, res: Response,
     try {
         const isCacheExist = await redis.get("allCourses");
 
-        if(isCacheExist){
+        if (isCacheExist) {
             const courses = JSON.parse(isCacheExist);
             res.status(200).json({
                 success: true,
                 courses
             });
-        }else{
-        const courses = await CourseModel.find().select("-courseData.videoUrl -courseData.links -courseData.questions -courseData.suggestions");
-        await redis.set("allCourses", JSON.stringify(courses));
+        } else {
+            const courses = await CourseModel.find().select("-courseData.videoUrl -courseData.links -courseData.questions -courseData.suggestions");
+            await redis.set("allCourses", JSON.stringify(courses));
+            res.status(200).json({
+                success: true,
+                courses,
+            });
+        }
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
+});
+
+// get course content once purchased
+export const getCourseByUser = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userCourseList = req.user?.courses;
+        const courseID = req.params.id;
+
+        const courseExist = userCourseList?.find((course: any) => course._id.toString() === courseID);
+
+        if(!courseExist){
+            return next(new ErrorHandler("You are not eligible to access content of this course", 404));
+        }
+
+        const course = await CourseModel.findById(courseID);
+        const content = course?.courseData;
+
         res.status(200).json({
             success: true,
-            courses,
+            content,
         });
-    }
     } catch (error: any) {
         return next(new ErrorHandler(error.message, 400));
     }
