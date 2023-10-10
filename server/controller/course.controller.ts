@@ -5,6 +5,7 @@ import cloudinary from "cloudinary";
 import { createCourse } from "../services/course.service";
 import CourseModel from "../model/course.model";
 import { redis } from "../utils/redis";
+import mongoose from "mongoose";
 
 export const uploadCourse = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -120,7 +121,7 @@ export const getCourseByUser = catchAsyncError(async (req: Request, res: Respons
 
         const courseExist = userCourseList?.find((course: any) => course._id.toString() === courseID);
 
-        if(!courseExist){
+        if (!courseExist) {
             return next(new ErrorHandler("You are not eligible to access content of this course", 404));
         }
 
@@ -133,5 +134,45 @@ export const getCourseByUser = catchAsyncError(async (req: Request, res: Respons
         });
     } catch (error: any) {
         return next(new ErrorHandler(error.message, 400));
+    }
+});
+
+// add question in course
+interface IAddQuestionData {
+    question: string,
+    courseId: string,
+    contentId: string
+}
+
+export const addQuestion = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { question, contentId, courseId }: IAddQuestionData = req.body;
+        const course = await CourseModel.findById(courseId);
+
+        if (!mongoose.Types.ObjectId.isValid(contentId)) {
+            return next(new ErrorHandler("Invalid Content Id", 400));
+        }
+
+        const courseContent = course?.courseData.find((item: any) => item._id.equals(contentId));
+
+        if (!courseContent) {
+            return next(new ErrorHandler("Invalid Content Id", 400));
+        }
+
+        const newQuestion: any = {
+            user:req.user,
+            question,
+            questionReplies:[]
+        }
+
+        courseContent.questions.push(newQuestion);
+        await course?.save();
+
+        res.status(200).json({
+            success: true,
+            course
+        })
+    } catch (error: any) {
+        next(new ErrorHandler(error.message, 400));
     }
 });
