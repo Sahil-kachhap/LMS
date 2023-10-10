@@ -246,3 +246,68 @@ export const answerQuestions = catchAsyncError(async (req: Request, res: Respons
         return next(new ErrorHandler(error.message, 400));
     }
 });
+
+// add review
+interface IReviewData {
+    userId: string,
+    review: string,
+    rating: number
+}
+export const addReview = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // only users who have purchased the course are eligible to write a review
+        const courseList = req.user?.courses;
+        const courseId = req.params.id;
+
+        const isCourseExist = courseList?.some((item: any) => item._id.toString() === courseId.toString());
+
+        if (!isCourseExist) {
+            return next(new ErrorHandler("You are not eligible to write a review for this course", 400));
+        }
+
+        const course = await CourseModel.findById(courseId);
+
+        const { review, rating }: IReviewData = req.body;
+
+        const reviewData: any = {
+            user: req.user,
+            comment: review,
+            rating,
+        }
+
+        course?.reviews.push(reviewData);
+
+        let averageRating = 0;
+
+        course?.reviews.forEach((review: any) => {
+           averageRating += review.rating;
+        });
+
+        if(course){
+            course.ratings = averageRating/course.reviews.length;
+        }
+
+        await course?.save();
+
+        const notification = {
+            title: "New Review Received",
+            message: `${req.user?.name} has given a review in ${course?.name}`
+        }
+
+        res.status(200).json({
+            success: true,
+            course,
+        })
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
+});
+
+// reply to a review
+export const replyToReview = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
+});
