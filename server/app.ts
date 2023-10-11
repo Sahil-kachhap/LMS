@@ -5,6 +5,7 @@ import cors from "cors"
 import userRouter from "./routes/user.route"
 import { ErrorMiddleware } from "./middleware/error"
 import courseRouter from "./routes/course.route"
+import orderRouter from "./routes/order.route"
 export const app = express()
 
 // request body should be of max 50 mb
@@ -21,6 +22,7 @@ app.use(cors({
 // routes
 app.use('/api/v1', userRouter);
 app.use('/api/v1', courseRouter);
+app.use('/api/v1', orderRouter);
 
 // test api 
 app.get("/test", (req, res, next) => {
