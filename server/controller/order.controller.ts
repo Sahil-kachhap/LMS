@@ -28,14 +28,16 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
         }
 
         const data: any = {
-            course: course._id,
-            user: user?._id,
+            course_id: course._id,
+            user_id: user?._id,
+            payment_info,
         };
 
         const mailData = {
             order: {
                 _id: course._id.toString().slice(0, 6),
-                name: course.name,
+                userName: req.user?.name,
+                course: course.name,
                 price: course.price,
                 date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
             }
@@ -69,6 +71,8 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
         if(course.purchased){
             course.purchased += 1;
         }
+
+        course.purchased ? course.purchased += 1: course.purchased;
 
         await course.save();
         

@@ -1,36 +1,43 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Order Confirmation</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        font-size: 16px;
-        line-height: 1.5;
-        color: #333;
-      }
-      h1 {
-        font-size: 24px;
-        margin-bottom: 20px;
-      }
-      p {
-        margin-bottom: 10px;
-      }
-      .signature {
-        margin-top: 30px;
-        font-style: italic;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Order Confirmation</h1>
-    <p>Dear <%= order.name %>,</p>
-    <p>Thank you for purchasing <%= course.title %> course.</p>
-    <p>Your order has been confirmed (Order ID #: <%= order._id %>) and your payment of ₹<%= order.price %> has been received.</p>
-    <p>You can access the course by logging in to your account.</p>
-    <p>If you have any questions or concerns, please feel free to contact us at our website.</p>
-    <p>Best regards,</p>
-    <p>The E-Learning Web App Team</p>
-    <div class="signature">This email was sent automatically. Please do not reply to this email.</div>
-  </body>
+
+<head>
+  <title>Order Confirmation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      color: #333;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    p {
+      margin-bottom: 10px;
+    }
+
+    .signature {
+      margin-top: 30px;
+      font-style: italic;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Order Confirmation</h1>
+  <p>Dear <%= order.userName %>,</p>
+  <p>Thank you for purchasing course: <%= order.course %>.</p>
+  <p>Your order has been confirmed (Order ID #: <%= order._id %>) and your payment of ₹<%= order.price %> has been
+        received.</p>
+  <p>You can access the course by logging in to your account.</p>
+  <p>If you have any questions or concerns, please feel free to contact us at our website.</p>
+  <p>Best regards,</p>
+  <p>The E-Learning Web App Team</p>
+  <div class="signature">This email was sent automatically. Please do not reply to this email.</div>
+</body>
+
 </html>
