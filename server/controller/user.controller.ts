@@ -376,11 +376,34 @@ export const fetchAllUsers = catchAsyncError(async (req: Request, res: Response,
 
 // update user role - only for admins
 export const updateUserRole = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
-    try{
-      const {id, role} = req.body;
+    try {
+        const { id, role } = req.body;
 
-      updateUserRoleService(res, id, role);
-    }catch(error: any){
+        updateUserRoleService(res, id, role);
+    } catch (error: any) {
         return next(new ErrorHandler(error.message, 400));
     }
-})
+});
+
+// delete user -- admin
+export const deleteUser = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+
+        const user = await userModel.findById(id);
+
+        if (!user) {
+            return next(new ErrorHandler("User not found", 404));
+        }
+
+        await user.deleteOne({ id });
+        await redis.del(id);
+
+        res.status(200).json({
+            success: true,
+            message: "User deleted successfully"
+        });
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
+});

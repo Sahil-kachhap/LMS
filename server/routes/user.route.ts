@@ -1,5 +1,5 @@
 import express from "express";
-import { activateUser, fetchAllUsers, getUserInfo, loginUser, logoutUser, registerUser, socialAuth, updateAccessToken, updateAvatar, updatePassword, updateUserInfo, updateUserRole } from "../controller/user.controller";
+import { activateUser, deleteUser, fetchAllUsers, getUserInfo, loginUser, logoutUser, registerUser, socialAuth, updateAccessToken, updateAvatar, updatePassword, updateUserInfo, updateUserRole } from "../controller/user.controller";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 const userRouter = express.Router();
 
@@ -38,4 +38,7 @@ userRouter.get("/admin/users", isAuthenticated, authorizeRoles("admin"), fetchAl
 
 // update user role - admin
 userRouter.put("/admin/role", isAuthenticated, authorizeRoles("admin"), updateUserRole);
+
+// delete user -- admin
+userRouter.delete("/user/:id", isAuthenticated, authorizeRoles("admin"), deleteUser);
 export default userRouter;
