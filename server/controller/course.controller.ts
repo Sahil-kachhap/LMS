@@ -9,6 +9,7 @@ import mongoose from "mongoose";
 import ejs from "ejs";
 import path from "path";
 import sendMail from "../utils/send_mail";
+import notificationModel from "../model/notification.model";
 
 export const uploadCourse = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -169,6 +170,13 @@ export const addQuestion = catchAsyncError(async (req: Request, res: Response, n
         }
 
         courseContent.questions.push(newQuestion);
+
+        await notificationModel.create({
+            user: req.user?._id,
+            title: "New Question Received",
+            message: `You have a new question in ${courseContent.title}`
+        });
+
         await course?.save();
 
         res.status(200).json({
@@ -219,6 +227,12 @@ export const answerQuestions = catchAsyncError(async (req: Request, res: Respons
 
         if (req.user?._id === question.user._id) {
             // notification
+            await notificationModel.create({
+                user: req.user?._id,
+                title: "New Question Reply received",
+                message: `You have a new question reply in ${courseContent.title}`,
+            });
+
         } else {
             const data = {
                 name: question.user.name,
@@ -280,11 +294,11 @@ export const addReview = catchAsyncError(async (req: Request, res: Response, nex
         let averageRating = 0;
 
         course?.reviews.forEach((review: any) => {
-           averageRating += review.rating;
+            averageRating += review.rating;
         });
 
-        if(course){
-            course.ratings = averageRating/course.reviews.length;
+        if (course) {
+            course.ratings = averageRating / course.reviews.length;
         }
 
         await course?.save();
@@ -304,44 +318,44 @@ export const addReview = catchAsyncError(async (req: Request, res: Response, nex
 });
 
 // reply to a review
-interface IReplyReview{
-   comment: string,
-   review_id: string,
-   course_id: string
+interface IReplyReview {
+    comment: string,
+    review_id: string,
+    course_id: string
 }
 
 
 export const replyToReview = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const {comment, review_id, course_id}: IReplyReview = req.body;
-      const course = await CourseModel.findById(course_id);
+        const { comment, review_id, course_id }: IReplyReview = req.body;
+        const course = await CourseModel.findById(course_id);
 
-      if(!course){
-        return next(new ErrorHandler("Course not found", 400));
-      }
+        if (!course) {
+            return next(new ErrorHandler("Course not found", 400));
+        }
 
-      const review = course.reviews.find((review: any) => review._id.toString() === review_id);
+        const review = course.reviews.find((review: any) => review._id.toString() === review_id);
 
-      if(!review){
-        return next(new ErrorHandler("Review Not Found", 400));
-      }
+        if (!review) {
+            return next(new ErrorHandler("Review Not Found", 400));
+        }
 
-      const replyData: any = {
-        user: req.user,
-        comment
-      }
+        const replyData: any = {
+            user: req.user,
+            comment
+        }
 
-      if(!review.commentReplies){
-        review.commentReplies = [];
-      }
+        if (!review.commentReplies) {
+            review.commentReplies = [];
+        }
 
-      review.commentReplies.push(replyData);
-      await course.save();
+        review.commentReplies.push(replyData);
+        await course.save();
 
-      res.status(200).json({
-        success: true,
-        course
-      })
+        res.status(200).json({
+            success: true,
+            course
+        })
     } catch (error: any) {
         return next(new ErrorHandler(error.message, 400));
     }
