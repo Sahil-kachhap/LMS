@@ -4,7 +4,7 @@ import { IOrder } from "../model/order.model";
 import userModel from "../model/user.model";
 import ErrorHandler from "../utils/error_handler";
 import CourseModel from "../model/course.model";
-import { newOrder } from "../services/order.service";
+import { getAllOrderService, newOrder } from "../services/order.service";
 import ejs from "ejs";
 import path from "path";
 import sendMail from "../utils/send_mail";
@@ -45,16 +45,16 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
 
         const html = await ejs.renderFile(path.join(__dirname, '../mails/order-confirmation.ejs'), { order: mailData });
 
-        try{
-           if(user){
-             await sendMail({
-                email: user.email,
-                subject: "Order Confirmation",
-                template: "order-confirmation.ejs",
-                data: mailData,
-             });
-           }
-        }catch(error: any){
+        try {
+            if (user) {
+                await sendMail({
+                    email: user.email,
+                    subject: "Order Confirmation",
+                    template: "order-confirmation.ejs",
+                    data: mailData,
+                });
+            }
+        } catch (error: any) {
             return next(new ErrorHandler(error.message, 400));
         }
 
@@ -68,15 +68,24 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
             message: `You have a new order from ${course?.name}`,
         });
 
-        if(course.purchased){
+        if (course.purchased) {
             course.purchased += 1;
         }
 
-        course.purchased ? course.purchased += 1: course.purchased;
+        course.purchased ? course.purchased += 1 : course.purchased;
 
         await course.save();
-        
+
         newOrder(data, res, next);
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
+});
+
+
+export const getAllOrders = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        getAllOrderService(res);
     } catch (error: any) {
         return next(new ErrorHandler(error.message, 400));
     }

@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { catchAsyncError } from "../middleware/catch_async_error";
 import ErrorHandler from "../utils/error_handler";
 import cloudinary from "cloudinary";
-import { createCourse } from "../services/course.service";
+import { createCourse, getAllCoursesService } from "../services/course.service";
 import CourseModel from "../model/course.model";
 import { redis } from "../utils/redis";
 import mongoose from "mongoose";
@@ -356,6 +356,16 @@ export const replyToReview = catchAsyncError(async (req: Request, res: Response,
             success: true,
             course
         })
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
+});
+
+// get all courses - for admin
+export const fetchAllCourses = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        getAllCoursesService(res);
+        console.log("On Correct Route")
     } catch (error: any) {
         return next(new ErrorHandler(error.message, 400));
     }

@@ -9,7 +9,7 @@ import path from "path";
 import sendMail from "../utils/send_mail";
 import { accessTokenOptions, refreshTokenOptions, sendToken } from "../utils/jwt";
 import { redis } from "../utils/redis";
-import { getUserById } from "../services/user.service";
+import { getAllUsersService, getUserById } from "../services/user.service";
 require('dotenv').config();
 
 interface IRegisteredUser {
@@ -319,8 +319,8 @@ interface IProfileAvatar {
 export const updateAvatar = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { avatar } = req.body as IProfileAvatar;
-        
-        if(!avatar){
+
+        if (!avatar) {
             return next(new ErrorHandler("Please upload a image to update profile avatar", 400));
         }
 
@@ -364,3 +364,12 @@ export const updateAvatar = catchAsyncError(async (req: Request, res: Response, 
         return next(new ErrorHandler(error.message, 400));
     }
 });
+
+// get all user -- for admin
+export const fetchAllUsers = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        getAllUsersService(res);
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+    }
+})
