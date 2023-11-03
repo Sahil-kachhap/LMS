@@ -179,7 +179,7 @@ export const updateAccessToken = catchAsyncError(async (req: Request, res: Respo
         const session = await redis.get(decodePayload.id as string);
 
         if (!session) {
-            return next(new ErrorHandler("Could not refresh token", 400));
+            return next(new ErrorHandler("Please login for accessing this resource", 400));
         }
 
         const user = JSON.parse(session);
@@ -189,6 +189,12 @@ export const updateAccessToken = catchAsyncError(async (req: Request, res: Respo
         req.user = user;
         res.cookie("access_token", accessToken, accessTokenOptions);
         res.cookie("refresh_token", refreshToken, refreshTokenOptions);
+
+        // Once access token is updated or user logs in we store their details 
+        // in redis cache and we remove their details from cache after 7 days
+        // this helps in better cache maintanance.
+        await redis.set(user._id, JSON.stringify(user), "EX", 604800);
+
 
         res.status(200).json({
             success: true,

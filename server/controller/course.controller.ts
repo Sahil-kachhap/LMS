@@ -80,8 +80,8 @@ export const getSingleCourse = catchAsyncError(async (req: Request, res: Respons
         } else {
             const courseData = await CourseModel.findById(courseID).select("-courseData.videoUrl -courseData.links -courseData.questions -courseData.suggestions");
 
-            // store db data in redis cache
-            await redis.set(courseID, JSON.stringify(courseData));
+            // store db data in redis cache -- just for 7 days
+            await redis.set(courseID, JSON.stringify(courseData), 'EX', 604800);
 
             res.status(200).json({
                 success: true,
